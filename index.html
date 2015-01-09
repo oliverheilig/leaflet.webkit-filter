@@ -1,0 +1,246 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+
+<html>
+<head>
+    <title>Leaflet Shader Example</title>
+    <meta content="yes" name="apple-mobile-web-app-capable">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+    <link href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" rel="stylesheet">
+    <link rel="stylesheet" href="forkme.css" />
+    <style>
+        body {
+            margin:0;
+            padding:0;
+        }
+        html, body, #map {
+            height: 100%;
+        }
+       .info {
+            width: 400px;
+            padding: 6px 8px;
+            font: 14px/16px Arial, Helvetica, sans-serif;
+            background: white;
+            background: rgba(255,255,255,1);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+        }
+        #controls label {
+            float: left;
+            clear: right;
+        }
+        #controls input {
+            width: 270px;
+            float: right;
+            margin-top:5px;;
+        }
+        .pad0 {
+            padding:2px 10px;
+        }
+        .alert {
+            color: red;
+        }
+		</style>
+</head>
+
+<body>
+    <div class="github-fork-ribbon-wrapper right-bottom">
+        <div class="github-fork-ribbon">
+            <a href="https://github.com/ptv-logistics/Leaflet.PtvLayer/">Fork me on GitHub</a>
+        </div>
+    </div>
+    <div id="map" />
+<div id="controls">
+    <div class='pad1>
+        <p>CSS Shader</p>
+    </div>
+    <fieldset class='pad1'>
+        <div class='pad0'><label>Brightness</label><input type="range" id="brightness"  min="0" max="200" value="100" /></div>
+        <div class='pad0'><label>Contrast  </label><input type="range" id="contrast"    min="0" max="200" value="100" /></div>
+        <div class='pad0'><label>grayscale </label><input type="range" id="grayscale"   min="0" max="100" value="0" /></div>
+        <div class='pad0'><label>sepia     </label><input type="range" id="sepia"       min="0" max="100" value="0" /></div>
+        <div class='pad0'><label>invert     </label><input type="range" id="invert"       min="0" max="100" value="0" /></div>
+        <div class='pad0'><label>saturate     </label><input type="range" id="saturate"       min="0" max="200" value="100" /></div>
+        <div class='pad0'><label>opacity     </label><input type="range" id="opacity"       min="0" max="100" value="100" /></div>
+        <div class='pad0'><label>hue-rotate     </label><input type="range" id="hue-rotate"       min="0" max="360" value="0" /></div>
+        <div class='pad0'><label>Blur      </label><input type="range" id="blur"        min="0" max="10" value="0" /></div>
+    </fieldset>
+</div>
+    <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+    <script src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
+    <script src="./NonTiledLayer.js"></script>
+    <script src="./NonTiledLayer.WMS.js"></script>
+    <script src="./Leaflet.PtvLayer.js"></script>
+    <script src="./token.js"></script>
+    <script>
+        // initialize leaflet
+        var map = new L.Map('map');
+
+        // set map viewport
+        var center, zoom;
+        if (isDefined(getUrlPram("lat")) && isDefined(getUrlPram("lng")) && isDefined(getUrlPram("z"))) {
+            center = new L.LatLng(getUrlPram("lat"), getUrlPram("lng"));
+            zoom = getUrlPram("z");
+        } else {
+            center = new L.LatLng(49.01, 8.4);
+            zoom = 16;
+        }
+				 
+	    var legend = L.control({position: 'topright'});
+
+        legend.onAdd = function(map) {
+            var div = L.DomUtil.create('div', 'info legend');
+
+            div.appendChild(document.getElementById("controls"));
+
+			  var stop = L.DomEvent.stopPropagation;
+			L.DomEvent
+            .on(div, 'click', stop)
+            .on(div, 'mousedown', stop)
+            .on(div, 'dblclick', stop)
+            .on(div, 'click', L.DomEvent.preventDefault);
+			
+            return div;
+        };
+		
+		legend.addTo(map);
+		
+		    [ ].forEach.call(document.querySelectorAll('#controls input'), function (input) {
+        input['oninput' in input ? 'oninput' : 'onchange'] = function (e) {
+            updateValues();
+            needsRedraw = true;
+        };
+    });
+
+	
+    function get(id) {
+        return document.getElementById(id);
+    }
+
+	   function updateValues() {
+
+		 map.getPanes().tilePane.style.webkitFilter = "contrast(" + parseInt(get('contrast').value) + "%) " 
+		   + "brightness(" + parseInt(get('brightness').value) + "%) "
+		   + "grayscale(" + parseInt(get('grayscale').value) + "%) "
+		   + "sepia(" + parseInt(get('sepia').value) + "%) "
+		   + "invert(" + parseInt(get('invert').value) + "%) "
+		   + "saturate(" + parseInt(get('saturate').value) + "%) "
+		   + "opacity(" + parseInt(get('opacity').value) + "%) "
+		   + "hue-rotate(" + parseInt(get('hue-rotate').value) + "deg) "
+		   + "blur(" + parseInt(get('blur').value) + "px)";  
+		  
+    }
+
+    updateValues();
+	
+        var layers;
+        if (isDefined(getUrlPram("layers"))) {
+            layers = getUrlPram("layers").split(';');
+        } else {
+            layers = ["traffic", "tpe", "ta", "poi"];
+        }
+
+        // center Karlsruhe
+        map.setView(center, zoom);
+
+        // using the xmap WMS servlet
+        var xMapUrl = 'https://xmap-eu-n-test.cloud.ptvgroup.com';
+        var xMapAttribution = '<a href="http://www.ptvgroup.com">PTV<\/a>, TOMTOM';
+
+        // add the xServer layers
+        // set the layer groups for default and sandbox
+        var baseLayers = {
+            "PTV classic": GetXMapBaseLayers(xMapUrl, "", xMapAttribution, token, map.getPanes().tilePane),
+            "PTV sandbox": GetXMapBaseLayers(xMapUrl, "-sandbox", xMapAttribution, token, map.getPanes().tilePane).addTo(map),
+            "PTV silkysand": GetXMapBaseLayers(xMapUrl, "-silkysand", xMapAttribution, token, map.getPanes().tilePane)
+        };
+
+        if (!token) {
+            var popupMsg = 'Please provide your token in ' +
+                'the<br>script code and press Run to reload';
+
+            // add a marker in the given location, 
+            // attach some popup content to it and open the popup
+            L.marker(center).addTo(map)
+                .bindPopup(popupMsg)
+                .openPopup();
+
+            throw "NO TOKEN";
+        }
+ 
+        // add scale control
+        //L.control.scale().addTo(map);
+
+        // add traffic information
+        var traffic = new L.PtvLayer.TrafficInformation(xMapUrl, {
+            zIndex: 1,
+            attribution: xMapAttribution,
+            token: token
+        });
+
+        // add truck attributes
+        var ta = new L.PtvLayer.TruckAttributes(xMapUrl, {
+            zIndex: 2,
+            attribution: xMapAttribution,
+            token: token
+        });
+		
+        // add POIs
+        var poi = new L.PtvLayer.POI(xMapUrl, {
+            zIndex: 3,
+            attribution: xMapAttribution,
+            token: token
+        });
+		
+        // add layer selector
+        var overlays = {
+            "POIs": poi,
+            "Truck Attributes": ta,
+            "Traffic": traffic
+        };
+        L.control.layers(baseLayers, overlays).addTo(map);
+
+        // returns a layer group for xmap back- and foreground layers
+        function GetXMapBaseLayers(url, style, attribution, token, labelContainer) {
+            var background = new L.TileLayer.WMS(url + '/WMS/WMS', {
+                maxZoom: 19,
+                minZoom: 0,
+                opacity: 1.0,
+                noWrap: true,   
+                layers: 'xmap-ajaxbg' + style,
+                format: 'image/png',
+                transparent: false,
+                attribution: attribution
+            });
+
+            if (!token) {
+                background.options.opacity = .4;
+                return background;
+            }
+
+            var foreground = new L.NonTiledLayer.WMS(url + '/WMS/WMS?xtok=' + token, {
+                zIndex: 0,
+                opacity: 1.0,
+                layers: 'xmap-ajaxfg' + style,
+                format: 'image/png',
+                transparent: true,
+                attribution: attribution
+            });
+
+            return L.layerGroup([background, foreground]);
+        }
+
+        function getUrlPram(name) {
+            if (name = (new RegExp('[?&]' + encodeURIComponent(name) + '=([^&]*)')).exec(location.search))
+                return decodeURIComponent(name[1]);
+        }
+
+        function isDefined(obj) {
+            return !(obj === void 0);
+        }
+		
+		if (!L.Browser.webkit) {
+			alert('You need a webkit browser for this sample!');
+		}
+    </script>
+</body>
+</html>
