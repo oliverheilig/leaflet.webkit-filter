@@ -29,17 +29,24 @@
             clear: right;
         }
         #controls input {
-            width: 270px;
+            width: 250px;
             float: right;
             margin-top:5px;;
         }
         .pad0 {
             padding:2px 10px;
         }
+        .pad1 {
+            padding:2px 10px;
+        }
         .alert {
             color: red;
         }
 		</style>
+<!-- 		.leaflet-tile-pane {
+		-webkit-filter: sepia(100%);
+		filter: sepia(100%);
+		} -->
 </head>
 
 <body>
@@ -51,9 +58,10 @@
     <div id="map" />
 <div id="controls">
     <div class='pad1'>
-        <p>CSS Shader</p>
+        <p>Move CSS Filter values<br>You need Chrome, Safari or FF v35 for this sample</p>
     </div>
     <fieldset class='pad1'>
+		<div class='pad0'><label>only bg   </label><input type="checkbox" checked id="baseMap" onchange="updateValues();" /></div>
         <div class='pad0'><label>brightness</label><input type="range" id="brightness"  min="0" max="200" value="100" /></div>
         <div class='pad0'><label>contrast  </label><input type="range" id="contrast"    min="0" max="200" value="100" /></div>
         <div class='pad0'><label>grayscale </label><input type="range" id="grayscale"   min="0" max="100" value="0" /></div>
@@ -92,22 +100,20 @@
 
             div.appendChild(document.getElementById("controls"));
 
-			  var stop = L.DomEvent.stopPropagation;
+		var stop = L.DomEvent.stopPropagation;
 			L.DomEvent
             .on(div, 'click', stop)
             .on(div, 'mousedown', stop)
-            .on(div, 'dblclick', stop)
-            .on(div, 'click', L.DomEvent.preventDefault);
+            .on(div, 'dblclick', stop);
 			
             return div;
         };
 		
 		legend.addTo(map);
 		
-		    [ ].forEach.call(document.querySelectorAll('#controls input'), function (input) {
+		[ ].forEach.call(document.querySelectorAll('#controls input'), function (input) {
         input['oninput' in input ? 'oninput' : 'onchange'] = function (e) {
             updateValues();
-            needsRedraw = true;
         };
     });
 
@@ -116,18 +122,31 @@
         return document.getElementById(id);
     }
 
-	   function updateValues() {
-
-		 map.getPanes().tilePane.style.webkitFilter = "contrast(" + parseInt(get('contrast').value) + "%) " 
+	function updateValues() {
+		var filter = "" 
 		   + "brightness(" + parseInt(get('brightness').value) + "%) "
+		   + "contrast(" + parseInt(get('contrast').value) + "%) " 
 		   + "grayscale(" + parseInt(get('grayscale').value) + "%) "
 		   + "sepia(" + parseInt(get('sepia').value) + "%) "
 		   + "invert(" + parseInt(get('invert').value) + "%) "
 		   + "saturate(" + parseInt(get('saturate').value) + "%) "
 		   + "opacity(" + parseInt(get('opacity').value) + "%) "
 		   + "hue-rotate(" + parseInt(get('hue-rotate').value) + "deg) "
-		   + "blur(" + parseInt(get('blur').value) + "px)";  
-		  
+		   + "blur(" + parseInt(get('blur').value) + "px)"
+		   + ""; 
+		if(get('baseMap').checked) {
+			map.getPanes().mapPane.style.webkitFilter = "";
+			map.getPanes().mapPane.style.filter = "";
+			map.getPanes().tilePane.style.webkitFilter = filter;
+			map.getPanes().tilePane.style.filter = filter;
+		}
+		else
+		{
+			map.getPanes().tilePane.style.webkitFilter = "";
+			map.getPanes().tilePane.style.filter = "";
+			map.getPanes().mapPane.style.webkitFilter = filter;
+			map.getPanes().mapPane.style.filter = filter;
+		}
     }
 
     updateValues();
@@ -136,7 +155,7 @@
         if (isDefined(getUrlPram("layers"))) {
             layers = getUrlPram("layers").split(';');
         } else {
-            layers = ["traffic", "tpe", "ta", "poi"];
+            layers = ["traffic", "ta", "poi"];
         }
 
         // center Karlsruhe
@@ -168,7 +187,7 @@
         }
  
         // add scale control
-        //L.control.scale().addTo(map);
+        L.control.scale().addTo(map);
 
         // add traffic information
         var traffic = new L.PtvLayer.TrafficInformation(xMapUrl, {
@@ -237,10 +256,6 @@
         function isDefined(obj) {
             return !(obj === void 0);
         }
-		
-		if (!L.Browser.webkit) {
-			alert('You need a webkit browser for this sample!');
-		}
     </script>
 </body>
 </html>
