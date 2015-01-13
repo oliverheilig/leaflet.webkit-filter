@@ -237,6 +237,8 @@
             }
 
             var foreground = new L.NonTiledLayer.WMS(url + '/WMS/WMS?xtok=' + token, {
+                maxZoom: 19,
+                minZoom: 0,
                 zIndex: 0,
                 opacity: 1.0,
                 layers: 'xmap-ajaxfg' + style,
