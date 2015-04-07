@@ -162,15 +162,16 @@
         map.setView(center, zoom);
 
         // using the xmap WMS servlet
-        var xMapUrl = 'https://xmap-eu-n-test.cloud.ptvgroup.com';
+        var cluster = 'eu-n-test';
+		var xMapUrl = 'https://xmap-' + cluster + ".cloud.ptvgroup.com";
         var xMapAttribution = '<a href="http://www.ptvgroup.com">PTV<\/a>, TOMTOM';
 
         // add the xServer layers
         // set the layer groups for default and sandbox
         var baseLayers = {
-            "PTV classic": GetXMapBaseLayers(xMapUrl, "", xMapAttribution, token, map.getPanes().tilePane),
-            "PTV sandbox": GetXMapBaseLayers(xMapUrl, "-sandbox", xMapAttribution, token, map.getPanes().tilePane).addTo(map),
-            "PTV silkysand": GetXMapBaseLayers(xMapUrl, "-silkysand", xMapAttribution, token, map.getPanes().tilePane)
+            "PTV classic": getXMapBaseLayers(cluster, "", token, xMapAttribution, map.getPanes().tilePane),
+            "PTV sandbox": getXMapBaseLayers(cluster, "sandbox", token, xMapAttribution, map.getPanes().tilePane).addTo(map),
+            "PTV silkysand": getXMapBaseLayers(cluster, "silkysand", token, xMapAttribution, map.getPanes().tilePane)
         };
 
         if (!token) {
@@ -219,37 +220,26 @@
         L.control.layers(baseLayers, overlays).addTo(map);
 
         // returns a layer group for xmap back- and foreground layers
-        function GetXMapBaseLayers(url, style, attribution, token, labelContainer) {
-            var background = new L.TileLayer.WMS(url + '/WMS/WMS', {
-                maxZoom: 19,
-                minZoom: 0,
-                opacity: 1.0,
-                noWrap: true,   
-                layers: 'xmap-ajaxbg' + style,
-                format: 'image/png',
-                transparent: false,
-                attribution: attribution
-            });
+        function getXMapBaseLayers(cluster, style, token, attribution, pane) {
+            var background = L.tileLayer('https://ajaxbg{s}-' + cluster + '.cloud.ptvgroup.com/WMS/GetTile/' +
+                (style ? 'xmap-' + style + '-bg' : 'xmap-ajaxbg') + '/{x}/{y}/{z}.png', {
+                    minZoom: 0, maxZoom: 19, opacity: 1.0,
+                    attribution: attribution,
+                    subdomains: '1234'
+                });
 
-            if (!token) {
-                background.options.opacity = .4;
-                return background;
-            }
-
-            var foreground = new L.NonTiledLayer.WMS(url + '/WMS/WMS?xtok=' + token, {
-                maxZoom: 19,
-                minZoom: 0,
-                zIndex: 0,
-                opacity: 1.0,
-                layers: 'xmap-ajaxfg' + style,
-                format: 'image/png',
-                transparent: true,
-                attribution: attribution
+            var foreground = new L.NonTiledLayer.WMS('https://ajaxfg-' + cluster + '.cloud.ptvgroup.com/WMS/WMS?xtok=' + token, {
+                minZoom: 0, maxZoom: 19, opacity: 1.0,
+                layers: style ? 'xmap-' + style + '-fg' : 'xmap-ajaxfg',
+                format: 'image/png', transparent: true,
+                attribution: attribution,
+				zIndex: 100,
+                pane: pane
             });
 
             return L.layerGroup([background, foreground]);
         }
-
+		
         function getUrlPram(name) {
             if (name = (new RegExp('[?&]' + encodeURIComponent(name) + '=([^&]*)')).exec(location.search))
                 return decodeURIComponent(name[1]);
